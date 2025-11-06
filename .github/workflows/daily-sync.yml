@@ -73,7 +73,7 @@ jobs:
           git commit --allow-empty -m "Chore: Sync with upstream streamdown@${{ steps.get_version.outputs.version }}"
           
           # 4. Create the tag
-          git tag v${{ steps.get_version.outputs.version }}
+          git tag v${{ steps.get_version.outputs.version }} || true
           
           # 5. Push the new commit AND the new tag
           git push
@@ -81,6 +81,7 @@ jobs:
 
       - name: Publish to NPM
         if: steps.force_or_changes.outputs.run_job == 'true'
+        continue-on-error: true
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
