@@ -70,7 +70,7 @@ jobs:
           git add .gitignore package.json package-lock.json dist/umd-streamdown.js
           
           # 3. Create the commit
-          git commit -m "🤖 Chore: Sync with upstream streamdown@${{ steps.get_version.outputs.version }}"
+          git commit -m "Chore: Sync with upstream streamdown@${{ steps.get_version.outputs.version }}"
           
           # 4. Create the tag
           git tag v${{ steps.get_version.outputs.version }}
