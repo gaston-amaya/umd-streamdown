@@ -1,6 +1,6 @@
 {
   "name": "@gastonsk/umd-streamdown",
-  "version": "1.0.0",
+  "version": "1.4.0",
   "description": "UMD wrapper for vercel/streamdown",
   "main": "dist/umd-streamdown.js",
   "files": [
