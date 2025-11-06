@@ -1,14 +1,17 @@
 name: Daily Streamdown Sync and Publish
 
 on:
+  # Runs at 00:00 UTC daily
   schedule:
     - cron: '0 0 * * *'
+  # Allows you to run it manually from the GitHub Actions tab
   workflow_dispatch:
 
 jobs:
   sync-and-publish:
     permissions:
       contents: write
+      releases: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -50,15 +53,13 @@ jobs:
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           
           # 1. Update package.json version WITHOUT creating a commit
-          #    The --no-git-tag-version flag is key.
           npm version ${{ steps.get_version.outputs.version }} --allow-same-version --no-git-tag-version
           
           # 2. Now, add all changed files to be committed
-          #    This includes package.json, package-lock.json, and dist/
           git add package.json package-lock.json dist/umd-streamdown.js
           
           # 3. Create the commit ourselves
-          git commit -m "Chore: Sync with upstream streamdown@${{ steps.get_version.outputs.version }}"
+          git commit -m "🤖 Chore: Sync with upstream streamdown@${{ steps.get_version.outputs.version }}"
           
           # 4. Create the tag ourselves
           git tag v${{ steps.get_version.outputs.version }}
@@ -72,3 +73,14 @@ jobs:
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.git_status.outputs.changes > 0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: v${{ steps.get_version.outputs.version }}
+          COMMIT_MESSAGE: "Chore: Sync with upstream streamdown@${{ steps.get_version.outputs.version }}"
+        run: |
+          gh release create "$TAG_NAME" \
+            --title "Sync with upstream @ streamdown@${{ steps.get_version.outputs.version }}" \
+            --notes "$COMMIT_MESSAGE"
