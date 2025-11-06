@@ -46,16 +46,22 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          # Add all changed files for the commit
-          git add package.json package-lock.json dist/umd-streamdown.js
-          # Update the version in package.json AND create a git tag
+
+          # 1. Add ONLY the built file. npm version will add the package.json files.
+          git add dist/umd-streamdown.js
+          
+          # 2. Run npm version. This will:
+          #    a) Update package.json & package-lock.json
+          #    b) Add them to git
+          #    c) Create ONE commit including the dist file we already added
+          #    d) Create the git tag
           npm version ${{ steps.get_version.outputs.version }} --allow-same-version -m "🤖 Chore: Sync with upstream streamdown@${{ steps.get_version.outputs.version }}"
-          # Push the commit AND the new tag
+          
+          # 3. Push the new commit AND the new tag
           git push
           git push --tags
 
       - name: Publish to NPM
-        # Publishes the new version to NPM
         if: steps.git_status.outputs.changes > 0
         run: npm publish --access public
         env:
