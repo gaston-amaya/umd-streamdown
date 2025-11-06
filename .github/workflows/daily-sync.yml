@@ -39,7 +39,6 @@ jobs:
       - name: Check if force or changes are present
         id: force_or_changes
         run: |
-          # If the force input is 'true' OR if git status had changes, then 'run_job' is true
           if [[ "${{ github.event.inputs.force }}" == "true" || "${{ steps.git_status.outputs.changes }}" -gt 0 ]]; then
             echo "run_job=true" >> $GITHUB_OUTPUT
           else
@@ -67,13 +66,13 @@ jobs:
           # 1. Update package.json version WITHOUT creating a commit
           npm version ${{ steps.get_version.outputs.version }} --allow-same-version --no-git-tag-version
           
-          # 2. Now, add all changed files to be committed
-          git add package.json package-lock.json dist/umd-streamdown.js
+          # 2. Add all changed files AND the .gitignore file to the commit
+          git add .gitignore package.json package-lock.json dist/umd-streamdown.js
           
-          # 3. Create the commit ourselves
-          git commit -m "Chore: Sync with upstream streamdown@${{ steps.get_version.outputs.version }}"
+          # 3. Create the commit
+          git commit -m "🤖 Chore: Sync with upstream streamdown@${{ steps.get_version.outputs.version }}"
           
-          # 4. Create the tag ourselves
+          # 4. Create the tag
           git tag v${{ steps.get_version.outputs.version }}
           
           # 5. Push the new commit AND the new tag
