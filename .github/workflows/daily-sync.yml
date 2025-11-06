@@ -1,17 +1,14 @@
 name: Daily Streamdown Sync and Publish
 
 on:
-  # Runs at 00:00 UTC daily
   schedule:
     - cron: '0 0 * * *'
-  # Allows you to run it manually from the GitHub Actions tab
   workflow_dispatch:
 
 jobs:
   sync-and-publish:
     permissions:
       contents: write
-      releases: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -46,7 +43,6 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Update version, commit, and tag
-        # Updates YOUR package.json and creates a git tag
         if: steps.git_status.outputs.changes > 0
         run: |
           git config user.name 'github-actions[bot]'
