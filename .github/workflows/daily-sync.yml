@@ -36,20 +36,23 @@ jobs:
         if: steps.git_status.outputs.changes > 0
         id: get_version
         run: |
-          VERSION=$(node -p "require('streamdown/package.json').version")
+          # Read package.json as text to bypass Node's "exports" security policy
+          VERSION=$(node -p "JSON.parse(require('fs').readFileSync('node_modules/streamdown/package.json', 'utf8')).version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Update package.json version
+      - name: Update version, commit, and tag
+        # Updates YOUR package.json and creates a git tag
         if: steps.git_status.outputs.changes > 0
         run: |
-          # Use --allow-same-version in case the version number is the same but files changed
-          npm version ${{ steps.get_version.outputs.version }} --no-git-tag-version --allow-same-version
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           # Add all changed files for the commit
           git add package.json package-lock.json dist/umd-streamdown.js
-          git commit -m "🤖 Chore: Sync with upstream streamdown@${{ steps.get_version.outputs.version }}"
+          # Update the version in package.json AND create a git tag
+          npm version ${{ steps.get_version.outputs.version }} --allow-same-version -m "🤖 Chore: Sync with upstream streamdown@${{ steps.get_version.outputs.version }}"
+          # Push the commit AND the new tag
           git push
+          git push --tags
 
       - name: Publish to NPM
         # Publishes the new version to NPM
