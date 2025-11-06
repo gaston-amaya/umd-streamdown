@@ -1,0 +1,59 @@
+name: Daily Streamdown Sync and Publish
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org/'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Update streamdown to latest version
+        run: npm update streamdown
+
+      - name: Check for file changes
+        id: git_status
+        run: echo "changes=$(git status --porcelain=v1 | wc -l)" >> $GITHUB_OUTPUT
+
+      - name: Rebuild UMD if changes exist
+        if: steps.git_status.outputs.changes > 0
+        run: npm run build
+
+      - name: Get upstream version
+        if: steps.git_status.outputs.changes > 0
+        id: get_version
+        run: |
+          VERSION=$(node -p "require('streamdown/package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update package.json version
+        if: steps.git_status.outputs.changes > 0
+        run: |
+          # Use --allow-same-version in case the version number is the same but files changed
+          npm version ${{ steps.get_version.outputs.version }} --no-git-tag-version --allow-same-version
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          # Add all changed files for the commit
+          git add package.json package-lock.json dist/umd-streamdown.js
+          git commit -m "🤖 Chore: Sync with upstream streamdown@${{ steps.get_version.outputs.version }}"
+          git push
+
+      - name: Publish to NPM
+        # Publishes the new version to NPM
+        if: steps.git_status.outputs.changes > 0
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
