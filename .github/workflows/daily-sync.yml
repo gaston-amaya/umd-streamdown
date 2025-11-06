@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force a new build, tag, and release even if versions match'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   sync-and-publish:
@@ -30,12 +36,22 @@ jobs:
         id: git_status
         run: echo "changes=$(git status --porcelain=v1 package.json package-lock.json | wc -l)" >> $GITHUB_OUTPUT
 
+      - name: Check if force or changes are present
+        id: force_or_changes
+        run: |
+          # If the force input is 'true' OR if git status had changes, then 'run_job' is true
+          if [[ "${{ github.event.inputs.force }}" == "true" || "${{ steps.git_status.outputs.changes }}" -gt 0 ]]; then
+            echo "run_job=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_job=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Rebuild UMD if changes exist
-        if: steps.git_status.outputs.changes > 0
+        if: steps.force_or_changes.outputs.run_job == 'true'
         run: npm run build
 
       - name: Get upstream version
-        if: steps.git_status.outputs.changes > 0
+        if: steps.force_or_changes.outputs.run_job == 'true'
         id: get_version
         run: |
           # Read package.json as text to bypass Node's "exports" security policy
@@ -43,7 +59,7 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Update version, commit, and tag
-        if: steps.git_status.outputs.changes > 0
+        if: steps.force_or_changes.outputs.run_job == 'true'
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
@@ -65,13 +81,13 @@ jobs:
           git push --tags
 
       - name: Publish to NPM
-        if: steps.git_status.outputs.changes > 0
+        if: steps.force_or_changes.outputs.run_job == 'true'
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
-        if: steps.git_status.outputs.changes > 0
+        if: steps.force_or_changes.outputs.run_job == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: v${{ steps.get_version.outputs.version }}
