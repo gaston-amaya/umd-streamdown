@@ -94,5 +94,5 @@ jobs:
           COMMIT_MESSAGE: "Chore: Sync with upstream streamdown@${{ steps.get_version.outputs.version }}"
         run: |
           gh release create "$TAG_NAME" \
-            --title "Sync with upstream @ streamdown@${{ steps.get_version.outputs.version }}" \
+            --title "streamdown@${{ steps.get_version.outputs.version }}" \
             --notes "$COMMIT_MESSAGE"
